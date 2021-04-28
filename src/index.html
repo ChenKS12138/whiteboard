@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World!</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="box status">
+        <div
+          id="status-light"
+          data-status="inactive"
+          class="status-light"
+        ></div>
+        <div id="local-address"></div>
+      </div>
+      <div class="box box_server-controll">
+        <button id="btn1">start server</button>
+        <button disabled id="btn3">stop server</button>
+      </div>
+      <div class="box box_client-controll">
+        <input id="input" type="text" />
+        <button id="btn2">connect to server</button>
+        <button disabled id="btn4">disconnect to server</button>
+      </div>
+      <textarea disabled rows="20" cols="60" id="textarea"></textarea>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>
