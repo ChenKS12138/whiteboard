@@ -6,6 +6,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { createConnection, createServer } = require("./net");
 const events = require("./channelTypes");
+const { SizedChunkStream } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -14,10 +15,12 @@ if (require("electron-squirrel-startup")) {
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 700,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
+    minWidth: 800,
+    minHeight: 700,
   });
 
   mainWindow.loadFile(path.join(__dirname, "index.html"));
@@ -28,6 +31,8 @@ const createWindow = () => {
    * As TCP Server
    */
   ipcMain.on(events.SERVER_START, (evt) => {
+    const sizedChunkStream = new SizedChunkStream(960000);
+
     const { listen, srv, getSockets, send } = createServer({
       onConnected: () => {
         mainWindow.webContents.send(events.SERVER_ON_CLIENT_CONNECTED);
@@ -36,11 +41,19 @@ const createWindow = () => {
         mainWindow.webContents.send(events.SERVER_ON_CLIENT_DISCONNECTED);
       },
       onReceiveData: (data) => {
-        mainWindow.webContents.send(
-          events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE,
-          data
-        );
+        // mainWindow.webContents.send(
+        //   events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE,
+        //   data
+        // );
+        sizedChunkStream.write(data);
       },
+    });
+
+    sizedChunkStream.on("data", (data) => {
+      mainWindow.webContents.send(
+        events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE,
+        data
+      );
     });
 
     const handleServerStop = () => {
@@ -75,18 +88,29 @@ const createWindow = () => {
     const { connection, send } = createConnection({
       port,
       host,
-      onReceiveData: (data) => {
-        mainWindow.webContents.send(
-          events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
-          data
-        );
-      },
+      // onReceiveData: (data) => {
+      //   mainWindow.webContents.send(
+      //     events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
+      //     data
+      //   );
+      // },
       onConnected: () => {
         mainWindow.webContents.send(events.CLIENT_ON_SERVER_CONNECTED);
       },
       onDisconnected: () => {
         mainWindow.webContents.send(events.CLIENT_ON_SERVER_DISCONNECTED);
       },
+    });
+
+    const sizedChunkStream = new SizedChunkStream(960000);
+
+    connection.pipe(sizedChunkStream);
+
+    sizedChunkStream.on("data", (data) => {
+      mainWindow.webContents.send(
+        events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
+        data
+      );
     });
 
     const handelClientStop = () => {

@@ -1,10 +1,14 @@
+let totalSend = 0,
+  totalReceive = 0;
+
 const btn1Ele = document.querySelector("#btn1");
 const btn2Ele = document.querySelector("#btn2");
 const btn3Ele = document.querySelector("#btn3");
 const btn4Ele = document.querySelector("#btn4");
+const btn5Ele = document.querySelector("#btn5");
 
 const inputEle = document.querySelector("#input");
-const textareaEle = document.querySelector("#textarea");
+const canvasEle = document.querySelector("#cav");
 const localAddressEle = document.querySelector("#local-address");
 const statusLight = document.querySelector("#status-light");
 
@@ -16,6 +20,10 @@ const store = new Proxy(
   {
     isWorking: false,
     isServer: false,
+    isPress: false,
+    lastX: 0,
+    lastY: 0,
+    context: canvasEle.getContext("2d"),
   },
   {
     set(target, key, value) {
@@ -36,7 +44,7 @@ const store = new Proxy(
               btn3Ele.disabled = true;
               btn4Ele.disabled = false;
             }
-            textareaEle.disabled = false;
+            canvasEle.dataset.disabled = "false";
           });
         } else {
           statusLight.dataset.status = "inactive";
@@ -46,8 +54,8 @@ const store = new Proxy(
           inputEle.disabled = false;
           btn3Ele.disabled = true;
           btn4Ele.disabled = true;
-          textareaEle.disabled = true;
-          textareaEle.value = "";
+          canvasEle.dataset.disabled = "true";
+          store.context.clearRect(0, 0, 600, 400);
         }
       }
       target[key] = value;
@@ -60,19 +68,53 @@ const store = new Proxy(
  */
 
 const handleReceivedBroadcastMessage = (evt, data) => {
-  const text = new TextDecoder().decode(data);
-  textareaEle.value = text;
+  const imageData = new ImageData(Uint8ClampedArray.from(data), 600, 400);
+  store.context.putImageData(imageData, 0, 0);
 };
 
-textareaEle.addEventListener("input", (event) => {
-  if (store.isWorking) {
-    const data = textareaEle.value;
-    if (store.isServer) {
-      electron.serverBroadcastMessage(data);
-    } else {
-      electron.clientBroadcastMessage(data);
+canvasEle.addEventListener("mousedown", (evt) => {
+  if (canvasEle.dataset.disabled === "false") {
+    store.lastX = evt.offsetX;
+    store.lastY = evt.offsetY;
+    store.isPress = true;
+  }
+});
+
+canvasEle.addEventListener("mouseup", (evt) => {
+  if (canvasEle.dataset.disabled === "false") {
+    if (store.isPress) {
+      drawLine(
+        store.context,
+        store.lastX,
+        store.lastY,
+        evt.offsetX,
+        evt.offsetY
+      );
+      store.isPress = false;
     }
   }
+});
+
+canvasEle.addEventListener("mousemove", (evt) => {
+  if (canvasEle.dataset.disabled === "false") {
+    if (store.isPress === true) {
+      drawLine(
+        store.context,
+        store.lastX,
+        store.lastY,
+        evt.offsetX,
+        evt.offsetY
+      );
+      store.lastX = evt.offsetX;
+      store.lastY = evt.offsetY;
+      broadcastBitmap();
+    }
+  }
+});
+
+btn5Ele.addEventListener("click", () => {
+  store.context.clearRect(0, 0, 600, 400);
+  broadcastBitmap();
 });
 
 /**
@@ -134,3 +176,24 @@ electron.clientOnServerDisconnected(() => {
 });
 
 electron.clientOnReceivedBroadCastMessage(handleReceivedBroadcastMessage);
+
+function broadcastBitmap() {
+  const bitmap = Uint8Array.from(
+    store.context.getImageData(0, 0, 600, 400).data
+  );
+  if (store.isServer) {
+    electron.serverBroadcastMessage(bitmap);
+  } else {
+    electron.clientBroadcastMessage(bitmap);
+  }
+}
+
+function drawLine(context, x1, y1, x2, y2) {
+  context.beginPath();
+  context.strokeStyle = "black";
+  context.lineWidth = 1;
+  context.moveTo(x1, y1);
+  context.lineTo(x2, y2);
+  context.stroke();
+  context.closePath();
+}
