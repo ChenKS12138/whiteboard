@@ -1,35 +1,21 @@
 const net = require("net");
+const { ServerBroadcastStream } = require("./stream");
 
-function createServer({ onReceiveData, onConnected, onDisconnected } = {}) {
-  let sockets = [];
+function createServer() {
+  const broadcastStream = new ServerBroadcastStream();
   const srv = net.createServer((socket) => {
-    sockets.push(socket);
-    onConnected && onConnected(socket);
-    socket.on("data", (data) => {
-      onReceiveData && onReceiveData(data);
-      sockets.forEach((one) => {
-        one !== socket && one.write(data);
-      });
-    });
+    broadcastStream.addSocket(socket);
     socket.on("end", () => {
-      sockets = sockets.filter((one) => one !== socket);
-      onDisconnected && onDisconnected(socket);
+      broadcastStream.removeSocket(socket);
     });
   });
-  const listen = (cb) => {
-    srv.listen({ port: 0, host: "0.0.0.0" }, cb);
-  };
-  const send = (data) => {
-    sockets.forEach((socket) => {
-      socket.write(data);
-    });
-  };
-  const getSockets = () => sockets;
+  srv.listen({ port: 0, host: "0.0.0.0" }, () => {
+    broadcastStream.emit("startServer");
+  });
+
   return {
-    getSockets,
     srv,
-    listen,
-    send,
+    broadcastStream,
   };
 }
 
@@ -50,10 +36,11 @@ function createConnection({
   conn.on("close", () => {
     onDisconnected && onDisconnected();
   });
-  const send = (data) => {
-    conn.write(data);
-  };
-  return { connection: conn, send };
+  conn.on("end", () => {
+    conn.destroy();
+    conn.unref();
+  });
+  return { connection: conn };
 }
 
 module.exports = {

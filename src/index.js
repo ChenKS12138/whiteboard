@@ -1,13 +1,17 @@
-// try {
-//   require("electron-reloader")(module);
-// } catch (_) {}
+try {
+  require("electron-reloader")(module);
+} catch (_) {}
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const stream = require("stream");
 const { createConnection, createServer } = require("./net");
 const events = require("./channelTypes");
-const { SizedChunkStream, WebContentsEventStream } = require("./stream");
+const {
+  SizedChunkStream,
+  WebContentsEventStream,
+  IpcMainEventStream,
+} = require("./stream");
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -32,22 +36,29 @@ const createWindow = () => {
    * As TCP Server
    */
   ipcMain.on(events.SERVER_START, (evt) => {
-    const sizedChunkStream = new SizedChunkStream(960000);
+    const { srv, broadcastStream } = createServer();
 
-    const { listen, srv, getSockets, send } = createServer({
-      onConnected: () => {
-        mainWindow.webContents.send(events.SERVER_ON_CLIENT_CONNECTED);
-      },
-      onDisconnected: () => {
-        mainWindow.webContents.send(events.SERVER_ON_CLIENT_DISCONNECTED);
-      },
-      onReceiveData: (data) => {
-        sizedChunkStream.write(data);
-      },
+    broadcastStream.on("startServer", () => {
+      evt.reply(events.SERVER_ON_SERVE_START, srv.address());
+      app.once("window-all-closed", () => {
+        broadcastStream.emit("stopServer");
+      });
+      ipcMain.once(events.SERVER_STOP, () => {
+        broadcastStream.emit("stopServer");
+      });
     });
 
+    broadcastStream.on("stopServer", () => {
+      srv.close(() => {
+        srv.unref();
+      });
+      broadcastStream.destroy();
+    });
+
+    // Pipe Msg, Client -> Server
     stream.pipeline(
-      sizedChunkStream,
+      broadcastStream,
+      new SizedChunkStream(960000),
       new WebContentsEventStream(
         mainWindow.webContents,
         events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
@@ -55,46 +66,41 @@ const createWindow = () => {
       () => {}
     );
 
-    const handleServerStop = () => {
-      ipcMain.removeListener(
-        events.SERVER_BROADCAST_MESSAGE,
-        handleServerSendData
-      );
-      const sockets = getSockets();
-      sockets.forEach((socket) => {
-        socket.destroy();
-        socket.unref();
-      });
-      srv.close(() => {
-        srv.unref();
-      });
-    };
-    const handleServerSendData = (evt, data) => {
-      send(data);
-    };
-    ipcMain.on(events.SERVER_BROADCAST_MESSAGE, handleServerSendData);
-    listen(() => {
-      evt.reply(events.SERVER_ON_SERVE_START, srv.address());
-      app.once("window-all-closed", handleServerStop);
-      ipcMain.once(events.SERVER_STOP, handleServerStop);
-    });
+    // Pipe Msg, Server -> Client
+    stream.pipeline(
+      new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
+      broadcastStream,
+      () => {}
+    );
   });
 
   /**
    * As TCP Client
    */
   ipcMain.on(events.CLIENT_START_CONNECT, (evt, { port, host } = {}) => {
-    const { connection, send } = createConnection({
+    const { connection } = createConnection({
       port,
       host,
-      onConnected: () => {
-        mainWindow.webContents.send(events.CLIENT_ON_SERVER_CONNECTED);
-      },
-      onDisconnected: () => {
-        mainWindow.webContents.send(events.CLIENT_ON_SERVER_DISCONNECTED);
-      },
     });
 
+    connection.on("connect", () => {
+      mainWindow.webContents.send(events.CLIENT_ON_SERVER_CONNECTED);
+    });
+
+    connection.on("close", () => {
+      mainWindow.webContents.send(events.CLIENT_ON_SERVER_DISCONNECTED);
+      connection.destroy();
+    });
+
+    app.once("window-all-closed", () => {
+      connection.end();
+    });
+
+    ipcMain.on(events.CLIENT_STOP_CONNECT, () => {
+      connection.end();
+    });
+
+    // Pipe Msg, Server -> Client
     stream.pipeline(
       connection,
       new SizedChunkStream(960000),
@@ -105,21 +111,12 @@ const createWindow = () => {
       () => {}
     );
 
-    const handelClientStop = () => {
-      ipcMain.removeListener(
-        events.CLIENT_BROADCAST_MESSAGE,
-        handleClientSendData
-      );
-      connection.end();
-      connection.destroy();
-      connection.unref();
-    };
-    const handleClientSendData = (evt, data) => {
-      send(data);
-    };
-    ipcMain.on(events.CLIENT_BROADCAST_MESSAGE, handleClientSendData);
-    app.once("window-all-closed", handelClientStop);
-    ipcMain.on(events.CLIENT_STOP_CONNECT, handelClientStop);
+    // Pipe Msg, Client -> Server
+    stream.pipeline(
+      new IpcMainEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
+      connection,
+      () => {}
+    );
   });
 };
 

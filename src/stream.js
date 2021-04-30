@@ -41,7 +41,51 @@ class WebContentsEventStream extends stream.Writable {
   }
 }
 
+class IpcMainEventStream extends stream.PassThrough {
+  constructor(ipcMain, event) {
+    super();
+    ipcMain.on(event, (evt, data) => {
+      this.write(data);
+    });
+  }
+}
+
+class ServerBroadcastStream extends stream.PassThrough {
+  constructor() {
+    super();
+    this._sockets = [];
+    this.pause();
+  }
+  _destroy() {
+    this._sockets.forEach((socket) => {
+      socket.unpipe(this);
+      this.unpipe(socket);
+      socket.destroy();
+      socket.unref();
+    });
+  }
+  addSocket(socket) {
+    this._sockets.forEach((one) => {
+      one.pipe(socket);
+      socket.pipe(socket);
+    });
+    socket.pipe(this);
+    this.pipe(socket);
+    this._sockets.push(socket);
+  }
+  removeSocket(socket) {
+    const index = this._sockets.findIndex((one) => one === socket);
+    if (index !== -1) {
+      this._sockets.splice(index, 1);
+      this.unpipe(socket);
+      socket.unpipe(this);
+    }
+  }
+}
+
 module.exports = {
   SizedChunkStream,
   WebContentsEventStream,
+  IpcMainEventStream,
+  ServerBroadcastStream,
 };
