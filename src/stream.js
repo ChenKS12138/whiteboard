@@ -29,6 +29,19 @@ class SizedChunkStream extends stream.Transform {
   }
 }
 
+class WebContentsEventStream extends stream.Writable {
+  constructor(webContents, event) {
+    super();
+    this._webContents = webContents;
+    this._event = event;
+  }
+  _write(chunk, enc, callback) {
+    this._webContents.send(this._event, chunk);
+    callback();
+  }
+}
+
 module.exports = {
   SizedChunkStream,
+  WebContentsEventStream,
 };

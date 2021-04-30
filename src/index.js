@@ -4,9 +4,10 @@
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const stream = require("stream");
 const { createConnection, createServer } = require("./net");
 const events = require("./channelTypes");
-const { SizedChunkStream } = require("./stream");
+const { SizedChunkStream, WebContentsEventStream } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -45,12 +46,14 @@ const createWindow = () => {
       },
     });
 
-    sizedChunkStream.on("data", (data) => {
-      mainWindow.webContents.send(
-        events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE,
-        data
-      );
-    });
+    stream.pipeline(
+      sizedChunkStream,
+      new WebContentsEventStream(
+        mainWindow.webContents,
+        events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
+      ),
+      () => {}
+    );
 
     const handleServerStop = () => {
       ipcMain.removeListener(
@@ -92,16 +95,15 @@ const createWindow = () => {
       },
     });
 
-    const sizedChunkStream = new SizedChunkStream(960000);
-
-    connection.pipe(sizedChunkStream);
-
-    sizedChunkStream.on("data", (data) => {
-      mainWindow.webContents.send(
-        events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
-        data
-      );
-    });
+    stream.pipeline(
+      connection,
+      new SizedChunkStream(960000),
+      new WebContentsEventStream(
+        mainWindow.webContents,
+        events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE
+      ),
+      () => {}
+    );
 
     const handelClientStop = () => {
       ipcMain.removeListener(
