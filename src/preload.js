@@ -52,10 +52,6 @@ contextBridge.exposeInMainWorld("electron", {
   ),
 });
 
-// ipcRenderer.on("log", function (evt, message) {
-//   console.log("log main process", message);
-// });
-
 function createContextBridgeMessageApi(key, ipcRenderer) {
   return {
     [key]: (...args) => ipcRenderer.send(key, ...args),

@@ -1,6 +1,6 @@
-try {
-  require("electron-reloader")(module);
-} catch (_) {}
+// try {
+//   require("electron-reloader")(module);
+// } catch (_) {}
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
@@ -41,10 +41,6 @@ const createWindow = () => {
         mainWindow.webContents.send(events.SERVER_ON_CLIENT_DISCONNECTED);
       },
       onReceiveData: (data) => {
-        // mainWindow.webContents.send(
-        //   events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE,
-        //   data
-        // );
         sizedChunkStream.write(data);
       },
     });
@@ -88,12 +84,6 @@ const createWindow = () => {
     const { connection, send } = createConnection({
       port,
       host,
-      // onReceiveData: (data) => {
-      //   mainWindow.webContents.send(
-      //     events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
-      //     data
-      //   );
-      // },
       onConnected: () => {
         mainWindow.webContents.send(events.CLIENT_ON_SERVER_CONNECTED);
       },
