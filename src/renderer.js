@@ -9,6 +9,7 @@ const btn5Ele = document.querySelector("#btn5");
 
 const inputEle = document.querySelector("#input");
 const canvasEle = document.querySelector("#cav");
+const canvasHiddenEle = document.querySelector("#cav-hidden");
 const localAddressEle = document.querySelector("#local-address");
 const statusLight = document.querySelector("#status-light");
 
@@ -24,6 +25,7 @@ const store = new Proxy(
     lastX: 0,
     lastY: 0,
     context: canvasEle.getContext("2d"),
+    contextHidden: canvasHiddenEle.getContext("2d"),
   },
   {
     set(target, key, value) {
@@ -68,7 +70,12 @@ const store = new Proxy(
  */
 
 const handleReceivedBroadcastMessage = (evt, data) => {
-  const imageData = new ImageData(Uint8ClampedArray.from(data), 600, 400);
+  const originPixels = store.context.getImageData(0, 0, 600, 400).data;
+  const incPixels = Int8Array.from(data);
+  for (let i = 0; i < incPixels.length; i++) {
+    originPixels[i] += incPixels[i];
+  }
+  const imageData = new ImageData(originPixels, 600, 400);
   store.context.putImageData(imageData, 0, 0);
 };
 
@@ -91,6 +98,7 @@ canvasEle.addEventListener("mouseup", (evt) => {
         evt.offsetY
       );
       store.isPress = false;
+      broadcastBitmap();
     }
   }
 });
@@ -179,13 +187,33 @@ electron.clientOnReceivedBroadCastMessage(handleReceivedBroadcastMessage);
 
 function broadcastBitmap() {
   const bitmap = Uint8Array.from(
-    store.context.getImageData(0, 0, 600, 400).data
+    diffContext(store.context, store.contextHidden)
   );
   if (store.isServer) {
     electron.serverBroadcastMessage(bitmap);
   } else {
     electron.clientBroadcastMessage(bitmap);
   }
+  syncContext(store.context, store.contextHidden);
+}
+
+function diffContext(context1, contex2) {
+  const pixels1 = context1.getImageData(0, 0, 600, 400).data;
+  const pixels2 = contex2.getImageData(0, 0, 600, 400).data;
+  const diff = new Int8Array(960000);
+  for (let i = 0; i < pixels1.length; i++) {
+    diff[i] = pixels1[i] - pixels2[i];
+  }
+  return diff;
+}
+
+function syncContext(sourceContext, targetContext) {
+  const sourcePixels = sourceContext.getImageData(0, 0, 600, 400).data;
+  const targetPixels = targetContext.getImageData(0, 0, 600, 400).data;
+  for (let i = 0; i < targetPixels.length; i++) {
+    targetPixels[i] = sourcePixels[i];
+  }
+  targetContext.putImageData(new ImageData(targetPixels, 600, 400), 0, 0);
 }
 
 function drawLine(context, x1, y1, x2, y2) {
