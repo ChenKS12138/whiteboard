@@ -14,6 +14,8 @@ const {
   SizePrefixedChunkDecodeStream,
   GzipStream,
   GunzipStream,
+  GenerateDiffStream,
+  ApplyDiffStream,
 } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
@@ -58,11 +60,14 @@ const createWindow = () => {
       broadcastStream.destroy();
     });
 
+    const bitmapBuffer = Buffer.alloc(960000);
+
     // Pipe Msg, Client -> Server
     stream.pipeline(
       broadcastStream,
       new SizePrefixedChunkDecodeStream(960000),
       new GunzipStream(),
+      new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
         events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
@@ -77,6 +82,7 @@ const createWindow = () => {
     // Pipe Msg, Server -> Client
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
+      new GenerateDiffStream(bitmapBuffer),
       new GzipStream(),
       new SizePrefixedChunkEncodeStream(),
       broadcastStream,
@@ -110,11 +116,14 @@ const createWindow = () => {
       connection.end();
     });
 
+    const bitmapBuffer = Buffer.alloc(960000);
+
     // Pipe Msg, Server -> Client
     stream.pipeline(
       connection,
       new SizePrefixedChunkDecodeStream(960000),
       new GunzipStream(),
+      new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
         events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE
@@ -125,6 +134,7 @@ const createWindow = () => {
     // Pipe Msg, Client -> Server
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
+      new GenerateDiffStream(bitmapBuffer),
       new GzipStream(),
       new SizePrefixedChunkEncodeStream(),
       connection,

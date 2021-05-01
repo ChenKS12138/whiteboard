@@ -88,6 +88,44 @@ class GunzipStream extends stream.Transform {
   }
 }
 
+class GenerateDiffStream extends stream.Transform {
+  constructor(buffer) {
+    super();
+    this._buffer = buffer || null;
+  }
+  _transform(chunk, enc, callback) {
+    const len = chunk.length;
+    if (this._buffer === null) {
+      this._buffer = Buffer.alloc(len).fill(0x00);
+    }
+    const diff = Buffer.alloc(len);
+    for (let i = 0; i < len; i++) {
+      diff[i] = chunk[i] - this._buffer[i];
+    }
+    this.push(diff, enc);
+    chunk.copy(this._buffer, 0, 0, len);
+    callback();
+  }
+}
+
+class ApplyDiffStream extends stream.Transform {
+  constructor(buffer) {
+    super();
+    this._buffer = buffer || null;
+  }
+  _transform(chunk, enc, callback) {
+    const len = chunk.length;
+    if (this._buffer === null) {
+      this._buffer = Buffer.alloc(len).fill(0x00);
+    }
+    for (let i = 0; i < len; i++) {
+      this._buffer[i] += chunk[i];
+    }
+    this.push(this._buffer, enc);
+    callback();
+  }
+}
+
 function numToBuffer(num) {
   return Buffer.from([
     (num >> 24) & 255,
@@ -117,32 +155,27 @@ class IpcMainEventStream extends stream.PassThrough {
   constructor(ipcMain, event) {
     super();
     ipcMain.on(event, (evt, data) => {
+      evt.returnValue = undefined;
       this.write(data);
     });
   }
 }
 
-class ServerBroadcastStream extends stream.PassThrough {
+class ServerBroadcastStream extends stream.Duplex {
   constructor() {
     super();
     this._sockets = [];
-    this.pause();
-  }
-  _destroy() {
-    this._sockets.forEach((socket) => {
-      socket.unpipe(this);
-      this.unpipe(socket);
-      socket.destroy();
-      socket.unref();
-    });
   }
   addSocket(socket) {
+    socket.on("data", (chunk) => {
+      if (!this.push(chunk)) {
+        one.pause();
+      }
+    });
     this._sockets.forEach((one) => {
       one.pipe(socket);
-      socket.pipe(socket);
+      socket.pipe(one);
     });
-    socket.pipe(this);
-    this.pipe(socket);
     this._sockets.push(socket);
   }
   removeSocket(socket) {
@@ -152,6 +185,33 @@ class ServerBroadcastStream extends stream.PassThrough {
       this.unpipe(socket);
       socket.unpipe(this);
     }
+  }
+  _read() {
+    for (let i = 0; i < this._sockets.length; i++) {
+      this._sockets[i].resume();
+    }
+  }
+  _write(input, encoding, done) {
+    let waiting = this._sockets.length;
+    if (waiting === 0) {
+      return done();
+    }
+    for (var i = 0; i < this._sockets.length; ++i) {
+      this._sockets[i].write(input, encoding, function () {
+        waiting--;
+        if (waiting === 0) {
+          return done();
+        }
+      });
+    }
+  }
+  _destroy() {
+    this._sockets.forEach((socket) => {
+      socket.unpipe(this);
+      this.unpipe(socket);
+      socket.destroy();
+      socket.unref();
+    });
   }
 }
 
@@ -164,4 +224,6 @@ module.exports = {
   SizePrefixedChunkDecodeStream,
   GzipStream,
   GunzipStream,
+  GenerateDiffStream,
+  ApplyDiffStream,
 };
