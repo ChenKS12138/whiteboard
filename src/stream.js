@@ -1,35 +1,6 @@
 const stream = require("stream");
 const zlib = require("zlib");
 
-class SizedChunkStream extends stream.Transform {
-  constructor(bufferSize) {
-    super({
-      highWaterMark: bufferSize,
-    });
-    this._buffer = Buffer.alloc(bufferSize);
-    this._bufferSize = bufferSize;
-    this._index = 0;
-  }
-  _transform(buf, enc, callback) {
-    const data = Buffer.from(buf);
-    let index = 0;
-    while (index < data.length) {
-      const appendSize = Math.min(
-        this._bufferSize - this._index,
-        data.length - index
-      );
-      data.copy(this._buffer, this._index, index, index + appendSize);
-      this._index += appendSize;
-      index += appendSize;
-      if (this._index >= this._bufferSize) {
-        this.push(this._buffer, enc);
-        this._index -= this._bufferSize;
-      }
-    }
-    callback();
-  }
-}
-
 class SizePrefixedChunkEncodeStream extends stream.Transform {
   constructor() {
     super();
@@ -74,17 +45,17 @@ class SizePrefixedChunkDecodeStream extends stream.Transform {
   }
 }
 
-class GzipStream extends stream.Transform {
+class CompressStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    const compressed = zlib.gzipSync(chunk);
+    const compressed = zlib.brotliCompressSync(chunk);
     this.push(compressed, enc);
     callback();
   }
 }
 
-class GunzipStream extends stream.Transform {
+class DecompressStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    const decompressed = zlib.gunzipSync(chunk);
+    const decompressed = zlib.brotliDecompressSync(chunk);
     this.push(decompressed, enc);
     callback();
   }
@@ -218,14 +189,13 @@ class ServerBroadcastStream extends stream.Duplex {
 }
 
 module.exports = {
-  SizedChunkStream,
   WebContentsEventStream,
   IpcMainEventStream,
   ServerBroadcastStream,
   SizePrefixedChunkEncodeStream,
   SizePrefixedChunkDecodeStream,
-  GzipStream,
-  GunzipStream,
+  CompressStream,
+  DecompressStream,
   GenerateDiffStream,
   ApplyDiffStream,
 };

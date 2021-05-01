@@ -12,8 +12,8 @@ const {
   IpcMainEventStream,
   SizePrefixedChunkEncodeStream,
   SizePrefixedChunkDecodeStream,
-  GzipStream,
-  GunzipStream,
+  CompressStream,
+  DecompressStream,
   GenerateDiffStream,
   ApplyDiffStream,
 } = require("./stream");
@@ -66,7 +66,7 @@ const createWindow = () => {
     stream.pipeline(
       broadcastStream,
       new SizePrefixedChunkDecodeStream(960000),
-      new GunzipStream(),
+      new DecompressStream(),
       new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
@@ -83,7 +83,7 @@ const createWindow = () => {
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
       new GenerateDiffStream(bitmapBuffer),
-      new GzipStream(),
+      new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
       broadcastStream,
       () => {}
@@ -122,7 +122,7 @@ const createWindow = () => {
     stream.pipeline(
       connection,
       new SizePrefixedChunkDecodeStream(960000),
-      new GunzipStream(),
+      new DecompressStream(),
       new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
@@ -135,7 +135,7 @@ const createWindow = () => {
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
       new GenerateDiffStream(bitmapBuffer),
-      new GzipStream(),
+      new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
       connection,
       () => {}
