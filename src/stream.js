@@ -76,14 +76,16 @@ class SizePrefixedChunkDecodeStream extends stream.Transform {
 
 class GzipStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    this.push(zlib.gzipSync(chunk), enc);
+    const compressed = zlib.gzipSync(chunk);
+    this.push(compressed, enc);
     callback();
   }
 }
 
 class GunzipStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    this.push(zlib.gunzipSync(chunk), enc);
+    const decompressed = zlib.gunzipSync(chunk);
+    this.push(decompressed, enc);
     callback();
   }
 }
@@ -169,7 +171,7 @@ class ServerBroadcastStream extends stream.Duplex {
   addSocket(socket) {
     socket.on("data", (chunk) => {
       if (!this.push(chunk)) {
-        one.pause();
+        socket.pause();
       }
     });
     this._sockets.forEach((one) => {

@@ -95,7 +95,7 @@ canvasEle.addEventListener("mouseup", (evt) => {
 
 canvasEle.addEventListener("mousemove", (evt) => {
   if (canvasEle.dataset.disabled === "false") {
-    if (store.isPress === true) {
+    if (store.isPress === true && evt.offsetX <= 600 && evt.offsetY <= 400) {
       drawLine(
         store.context,
         store.lastX,
