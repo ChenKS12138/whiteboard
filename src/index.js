@@ -8,9 +8,12 @@ const stream = require("stream");
 const { createConnection, createServer } = require("./net");
 const events = require("./channelTypes");
 const {
-  SizedChunkStream,
   WebContentsEventStream,
   IpcMainEventStream,
+  SizePrefixedChunkEncodeStream,
+  SizePrefixedChunkDecodeStream,
+  GzipStream,
+  GunzipStream,
 } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
@@ -58,7 +61,8 @@ const createWindow = () => {
     // Pipe Msg, Client -> Server
     stream.pipeline(
       broadcastStream,
-      new SizedChunkStream(960000),
+      new SizePrefixedChunkDecodeStream(960000),
+      new GunzipStream(),
       new WebContentsEventStream(
         mainWindow.webContents,
         events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
@@ -69,6 +73,8 @@ const createWindow = () => {
     // Pipe Msg, Server -> Client
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
+      new GzipStream(),
+      new SizePrefixedChunkEncodeStream(),
       broadcastStream,
       () => {}
     );
@@ -103,7 +109,8 @@ const createWindow = () => {
     // Pipe Msg, Server -> Client
     stream.pipeline(
       connection,
-      new SizedChunkStream(960000),
+      new SizePrefixedChunkDecodeStream(960000),
+      new GunzipStream(),
       new WebContentsEventStream(
         mainWindow.webContents,
         events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE
@@ -114,6 +121,8 @@ const createWindow = () => {
     // Pipe Msg, Client -> Server
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
+      new GzipStream(),
+      new SizePrefixedChunkEncodeStream(),
       connection,
       () => {}
     );
