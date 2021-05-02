@@ -48,7 +48,7 @@ describe("sized chunk", () => {
         transform(chunk, enc, callback) {
           chunk = Buffer.from(chunk);
           for (const item of chunk) {
-            this.push(chunk);
+            this.push(Buffer.from([item]), enc);
           }
           callback();
         },
@@ -61,6 +61,9 @@ describe("sized chunk", () => {
         },
       }),
       (err) => {
+        if (err) {
+          console.error(err);
+        }
         expect(err).toBeUndefined();
         done();
       }

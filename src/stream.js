@@ -188,6 +188,25 @@ class ServerBroadcastStream extends stream.Duplex {
   }
 }
 
+class ThrottleStream extends stream.Transform {
+  constructor(interval = 0) {
+    super();
+    this._interval = interval;
+    this._lock = false;
+  }
+  _transform(chunk, enc, callback) {
+    if (!this._lock) {
+      this._lock = true;
+      this.push(chunk, enc);
+      const timer = setTimeout(() => {
+        this._lock = false;
+        clearTimeout(timer);
+      }, this._interval);
+    }
+    callback();
+  }
+}
+
 module.exports = {
   WebContentsEventStream,
   IpcMainEventStream,
@@ -198,4 +217,5 @@ module.exports = {
   DecompressStream,
   GenerateDiffStream,
   ApplyDiffStream,
+  ThrottleStream,
 };

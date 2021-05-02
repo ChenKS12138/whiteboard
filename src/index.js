@@ -75,10 +75,6 @@ const createWindow = () => {
       () => {}
     );
 
-    /**
-     * Compression Ratio About 1200/960000
-     */
-
     // Pipe Msg, Server -> Client
     stream.pipeline(
       new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
