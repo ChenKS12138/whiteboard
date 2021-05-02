@@ -7,6 +7,7 @@
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win=portable",
+    "build:mac": "electron-builder --mac",
     "test": "jest"
   },
   "keywords": [],
