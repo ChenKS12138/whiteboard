@@ -4,7 +4,19 @@ const {
   CompressStream,
   SizePrefixedChunkEncodeStream,
   SizePrefixedChunkDecodeStream,
+  numToBuffer,
+  bufferToNum,
 } = require("../src/stream");
+
+describe("number2buffer & buffer2number", () => {
+  it("should convert well", (done) => {
+    const testcases = [0, 255, 960000, 1, 100, 1000];
+    for (const num of testcases) {
+      expect(bufferToNum(numToBuffer(num))).toBe(num);
+    }
+    done();
+  });
+});
 
 describe("compress stream", () => {
   it("should zip and unzip", (done) => {
@@ -35,7 +47,8 @@ describe("compress stream", () => {
 
 describe("sized chunk", () => {
   it("should prefix chunk", (done) => {
-    const data = Buffer.from("hellohello");
+    const text = "hellohello";
+    const data = Buffer.from(text);
     stream.pipeline(
       new stream.Readable({
         read() {
@@ -56,7 +69,7 @@ describe("sized chunk", () => {
       new SizePrefixedChunkDecodeStream(1024),
       new stream.Writable({
         write(chunk, enc, callback) {
-          expect(chunk.toString()).toBe(data.toString());
+          expect(chunk.toString()).toBe(text);
           callback();
         },
       }),

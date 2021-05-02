@@ -15,28 +15,46 @@ class SizePrefixedChunkDecodeStream extends stream.Transform {
   constructor(maxChunkSize) {
     super();
     this._buffer = Buffer.alloc(maxChunkSize);
-    this._index = 0;
+    this._contentIndex = 0;
     this._prefixIndex = 0;
     this._prefixBuffer = Buffer.alloc(4);
   }
   _transform(chunk, enc, callback) {
     const data = Buffer.from(chunk);
-    if (this._prefixIndex < 4) {
-      const appendSize = Math.min(4 - this._prefixIndex, data.length);
-      data.copy(this._prefixBuffer, this._prefixIndex, 0, appendSize);
-      this._prefixIndex += appendSize;
-    }
-    if (this._prefixIndex >= 4) {
-      let index = this._prefixIndex;
-      const size = bufferToNum(this._prefixBuffer);
-      while (index < data.length) {
-        const appendSize = Math.min(size - this._index, data.length - index);
-        data.copy(this._buffer, this._index, index, index + appendSize);
-        this._index += appendSize;
-        index += appendSize;
-        if (this._index >= size) {
-          this.push(this._buffer.slice(0, size), enc);
-          this._index = 0;
+    let dataIndex = 0;
+    while (dataIndex < data.length) {
+      if (this._prefixIndex < 4) {
+        const appendSize = Math.max(
+          0,
+          Math.min(4 - this._prefixIndex, data.length - dataIndex)
+        );
+        data.copy(
+          this._prefixBuffer,
+          this._prefixIndex,
+          dataIndex,
+          dataIndex + appendSize
+        );
+        dataIndex += appendSize;
+        this._prefixIndex += appendSize;
+      } else {
+        const contentSize = bufferToNum(this._prefixBuffer);
+        const appendSize = Math.max(
+          0,
+          Math.min(contentSize - this._contentIndex, data.length - dataIndex)
+        );
+        data.copy(
+          this._buffer,
+          this._contentIndex,
+          dataIndex,
+          dataIndex + appendSize
+        );
+        this._contentIndex += appendSize;
+        dataIndex += appendSize;
+        if (this._contentIndex >= contentSize) {
+          const result = Buffer.alloc(contentSize);
+          this._buffer.copy(result, 0, 0, contentSize);
+          this.push(result, enc);
+          this._contentIndex = 0;
           this._prefixIndex = 0;
         }
       }
@@ -47,7 +65,7 @@ class SizePrefixedChunkDecodeStream extends stream.Transform {
 
 class CompressStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    const compressed = zlib.brotliCompressSync(chunk);
+    const compressed = zlib.deflateSync(chunk);
     this.push(compressed, enc);
     callback();
   }
@@ -55,7 +73,7 @@ class CompressStream extends stream.Transform {
 
 class DecompressStream extends stream.Transform {
   _transform(chunk, enc, callback) {
-    const decompressed = zlib.brotliDecompressSync(chunk);
+    const decompressed = zlib.inflateSync(chunk);
     this.push(decompressed, enc);
     callback();
   }
@@ -218,4 +236,6 @@ module.exports = {
   GenerateDiffStream,
   ApplyDiffStream,
   ThrottleStream,
+  numToBuffer,
+  bufferToNum,
 };
