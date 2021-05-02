@@ -9,7 +9,7 @@ const { createConnection, createServer } = require("./net");
 const events = require("./channelTypes");
 const {
   WebContentsEventStream,
-  IpcMainEventStream,
+  EmitterEventStream,
   SizePrefixedChunkEncodeStream,
   SizePrefixedChunkDecodeStream,
   CompressStream,
@@ -75,9 +75,29 @@ const createWindow = () => {
       () => {}
     );
 
+    broadcastStream.on("joinNewClient", (socket) => {
+      stream.pipeline(
+        new stream.Readable({
+          read() {
+            this.push(bitmapBuffer);
+            this.push(null);
+          },
+        }),
+        new CompressStream(),
+        new SizePrefixedChunkEncodeStream(),
+        new stream.Writable({
+          write(chunk, enc, callback) {
+            socket.write(chunk);
+            callback();
+          },
+        }),
+        () => {}
+      );
+    });
+
     // Pipe Msg, Server -> Client
     stream.pipeline(
-      new IpcMainEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
+      new EmitterEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
       new GenerateDiffStream(bitmapBuffer),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
@@ -129,7 +149,7 @@ const createWindow = () => {
 
     // Pipe Msg, Client -> Server
     stream.pipeline(
-      new IpcMainEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
+      new EmitterEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
       new GenerateDiffStream(bitmapBuffer),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),

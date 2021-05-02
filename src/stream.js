@@ -142,7 +142,7 @@ class WebContentsEventStream extends stream.Writable {
   }
 }
 
-class IpcMainEventStream extends stream.PassThrough {
+class EmitterEventStream extends stream.PassThrough {
   constructor(ipcMain, event) {
     super();
     ipcMain.on(event, (evt, data) => {
@@ -227,7 +227,7 @@ class ThrottleStream extends stream.Transform {
 
 module.exports = {
   WebContentsEventStream,
-  IpcMainEventStream,
+  EmitterEventStream,
   ServerBroadcastStream,
   SizePrefixedChunkEncodeStream,
   SizePrefixedChunkDecodeStream,

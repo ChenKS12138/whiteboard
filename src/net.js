@@ -4,6 +4,7 @@ const { ServerBroadcastStream } = require("./stream");
 function createServer() {
   const broadcastStream = new ServerBroadcastStream();
   const srv = net.createServer((socket) => {
+    broadcastStream.emit("joinNewClient", socket);
     broadcastStream.addSocket(socket);
     socket.on("end", () => {
       broadcastStream.removeSocket(socket);
