@@ -20,23 +20,8 @@ function createServer() {
   };
 }
 
-function createConnection({
-  port,
-  host,
-  onReceiveData,
-  onConnected,
-  onDisconnected,
-} = {}) {
+function createConnection({ port, host } = {}) {
   const conn = net.createConnection({ port, host });
-  conn.on("data", (data) => {
-    onReceiveData && onReceiveData(data);
-  });
-  conn.on("connect", () => {
-    onConnected && onConnected();
-  });
-  conn.on("close", () => {
-    onDisconnected && onDisconnected();
-  });
   conn.on("end", () => {
     conn.destroy();
     conn.unref();

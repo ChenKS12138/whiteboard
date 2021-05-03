@@ -6,6 +6,7 @@ const {
   SizePrefixedChunkDecodeStream,
   numToBuffer,
   bufferToNum,
+  ThrottleStream,
 } = require("../src/stream");
 
 describe("number2buffer & buffer2number", () => {
@@ -70,6 +71,38 @@ describe("sized chunk", () => {
       new stream.Writable({
         write(chunk, enc, callback) {
           expect(chunk.toString()).toBe(text);
+          callback();
+        },
+      }),
+      (err) => {
+        if (err) {
+          console.error(err);
+        }
+        expect(err).toBeUndefined();
+        done();
+      }
+    );
+  });
+});
+
+describe("throttle stream", () => {
+  it("shoudle throttle well", (done) => {
+    const upStream = new stream.PassThrough();
+    const resultIter = ["1", "3"][Symbol.iterator]();
+
+    upStream.write("1");
+    upStream.write("2");
+    setTimeout(() => {
+      upStream.write("3");
+      upStream.end();
+    }, 1000);
+
+    stream.pipeline(
+      upStream,
+      new ThrottleStream(1000),
+      new stream.Writable({
+        write(chunk, enc, callback) {
+          expect(chunk.toString()).toBe(resultIter.next().value);
           callback();
         },
       }),
