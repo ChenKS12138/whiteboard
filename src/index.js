@@ -16,6 +16,7 @@ const {
   DecompressStream,
   GenerateDiffStream,
   ApplyDiffStream,
+  ThrottleStream,
 } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
@@ -98,6 +99,7 @@ const createWindow = () => {
     // Pipe Msg, Server -> Client
     stream.pipeline(
       new EmitterEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
+      new ThrottleStream(16),
       new GenerateDiffStream(bitmapBuffer),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
@@ -150,6 +152,7 @@ const createWindow = () => {
     // Pipe Msg, Client -> Server
     stream.pipeline(
       new EmitterEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
+      new ThrottleStream(16),
       new GenerateDiffStream(bitmapBuffer),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),

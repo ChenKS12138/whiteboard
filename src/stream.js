@@ -210,16 +210,21 @@ class ThrottleStream extends stream.Transform {
   constructor(interval = 0) {
     super();
     this._interval = interval;
-    this._lock = false;
+    this._callback = null;
   }
   _transform(chunk, enc, callback) {
-    if (!this._lock) {
-      this._lock = true;
+    if (this._callback === null) {
       this.push(chunk, enc);
+      this._callback = function () {};
       const timer = setTimeout(() => {
-        this._lock = false;
+        this._callback && this._callback();
         clearTimeout(timer);
+        this._callback = null;
       }, this._interval);
+    } else {
+      this._callback = function () {
+        this.push(chunk, enc);
+      };
     }
     callback();
   }
