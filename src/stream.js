@@ -1,5 +1,9 @@
 const stream = require("stream");
 const zlib = require("zlib");
+const { v4: uuidv4 } = require("uuid");
+
+const constants = require("./constants");
+const proto = require("./proto");
 
 class SizePrefixedChunkEncodeStream extends stream.Transform {
   constructor() {
@@ -230,6 +234,33 @@ class ThrottleStream extends stream.Transform {
   }
 }
 
+class EncodeBitmapBroadcastUpdateMessageStream extends stream.Transform {
+  _transform(chunk, enc, callback) {
+    const updateMessage = proto.UpdateMessage.create({
+      uuid: uuidv4(),
+      dataKind: constants.DATA_KIND.BITMAP,
+      deliveryKind: constants.DELIVERY_KIND.BROADCASTED,
+      chunk,
+    });
+    this.push(proto.UpdateMessage.encode(updateMessage).finish());
+    callback();
+  }
+}
+
+class DecodeBitmapBroadcastUpdateMessageStream extends stream.Transform {
+  _transform(chunk, enc, callback) {
+    const updateMessage = proto.UpdateMessage.decode(chunk);
+    if (
+      updateMessage &&
+      updateMessage.dataKind === constants.DATA_KIND.BITMAP &&
+      updateMessage.deliveryKind === constants.DELIVERY_KIND.BROADCASTED
+    ) {
+      this.push(updateMessage.chunk);
+    }
+    callback();
+  }
+}
+
 module.exports = {
   WebContentsEventStream,
   EmitterEventStream,
@@ -243,4 +274,6 @@ module.exports = {
   ThrottleStream,
   numToBuffer,
   bufferToNum,
+  EncodeBitmapBroadcastUpdateMessageStream,
+  DecodeBitmapBroadcastUpdateMessageStream,
 };

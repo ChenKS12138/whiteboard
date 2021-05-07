@@ -17,6 +17,8 @@ const {
   GenerateDiffStream,
   ApplyDiffStream,
   ThrottleStream,
+  EncodeBitmapBroadcastUpdateMessageStream,
+  DecodeBitmapBroadcastUpdateMessageStream,
 } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
@@ -68,6 +70,7 @@ const createWindow = () => {
       broadcastStream,
       new SizePrefixedChunkDecodeStream(960000),
       new DecompressStream(),
+      new DecodeBitmapBroadcastUpdateMessageStream(),
       new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
@@ -84,6 +87,7 @@ const createWindow = () => {
             this.push(null);
           },
         }),
+        new EncodeBitmapBroadcastUpdateMessageStream(),
         new CompressStream(),
         new SizePrefixedChunkEncodeStream(),
         new stream.Writable({
@@ -101,6 +105,7 @@ const createWindow = () => {
       new EmitterEventStream(ipcMain, events.SERVER_BROADCAST_MESSAGE),
       new ThrottleStream(16),
       new GenerateDiffStream(bitmapBuffer),
+      new EncodeBitmapBroadcastUpdateMessageStream(),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
       broadcastStream,
@@ -141,6 +146,7 @@ const createWindow = () => {
       connection,
       new SizePrefixedChunkDecodeStream(960000),
       new DecompressStream(),
+      new DecodeBitmapBroadcastUpdateMessageStream(),
       new ApplyDiffStream(bitmapBuffer),
       new WebContentsEventStream(
         mainWindow.webContents,
@@ -154,6 +160,7 @@ const createWindow = () => {
       new EmitterEventStream(ipcMain, events.CLIENT_BROADCAST_MESSAGE),
       new ThrottleStream(16),
       new GenerateDiffStream(bitmapBuffer),
+      new EncodeBitmapBroadcastUpdateMessageStream(),
       new CompressStream(),
       new SizePrefixedChunkEncodeStream(),
       connection,

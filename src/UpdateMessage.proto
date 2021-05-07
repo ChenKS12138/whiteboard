@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package whiteboardpackage;
+
+message UpdateMessage {
+  enum DataKind {
+    BITMAP = 0;
+    USERLIST = 1;
+  }
+  enum DeliveryKind {
+    BROADCASTED = 0;
+    DIRECTIONAL = 1;
+  }
+  required string uuid = 1;
+  required DataKind data_kind = 2;
+  required DeliveryKind delivery_kind = 3;
+  optional bytes chunk = 4;
+}
