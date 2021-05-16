@@ -4,10 +4,19 @@ const btn3Ele = document.querySelector("#btn3");
 const btn4Ele = document.querySelector("#btn4");
 const btn5Ele = document.querySelector("#btn5");
 
+const upStreamLabelEle = document.querySelector(
+  ".label_speed[data-type='upstream']"
+);
+const downStreamLabelEle = document.querySelector(
+  ".label_speed[data-type='downstream']"
+);
+
 const inputEle = document.querySelector("#input");
 const canvasEle = document.querySelector("#cav");
 const localAddressEle = document.querySelector("#local-address");
 const statusLight = document.querySelector("#status-light");
+
+console.log(upStreamLabelEle, downStreamLabelEle);
 
 /**
  * State
@@ -175,6 +184,16 @@ electron.clientOnServerDisconnected(() => {
 
 electron.clientOnReceivedBroadCastMessage(handleReceivedBroadcastMessage);
 
+electron.reportUpStreamSpeed((_evt, info) => {
+  const speed = Math.round(info.chunkSize / info.interval);
+  upStreamLabelEle.innerText = formatSpeed(speed);
+});
+
+electron.reportDownStreamSpeed((_evt, info) => {
+  const speed = Math.round(info.chunkSize / info.interval);
+  downStreamLabelEle.innerText = formatSpeed(speed);
+});
+
 function broadcastBitmap() {
   const bitmap = Uint8Array.from(
     store.context.getImageData(0, 0, 600, 400).data
@@ -194,4 +213,18 @@ function drawLine(context, x1, y1, x2, y2) {
   context.lineTo(x2, y2);
   context.stroke();
   context.closePath();
+}
+
+/**
+ * @param {number} speedNum
+ * @returns {string}
+ */
+function formatSpeed(speedNum) {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let index = 0;
+  while (index < units.length && speedNum > 1024) {
+    speedNum = Math.round(speedNum / 1024);
+    index += 1;
+  }
+  return String(speedNum) + units[index] + "/s";
 }

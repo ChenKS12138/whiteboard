@@ -261,6 +261,65 @@ class DecodeBitmapBroadcastUpdateMessageStream extends stream.Transform {
   }
 }
 
+class UpdateMessageEncodeStream extends stream.Transform {
+  constructor() {
+    super({
+      objectMode: true,
+    });
+  }
+  _transform(obj, enc, callback) {
+    const updateMessage = proto.UpdateMessage.create({
+      uuid: obj.uuid,
+      dataKind: obj.dataKind,
+      deliveryKind: obj.deliveryKind,
+      chunk: obj.chunk,
+    });
+    this.push(proto.UpdateMessage.encode(updateMessage).finish());
+    callback();
+  }
+}
+
+class UpdateMessageDecodeStream extends stream.Transform {
+  constructor() {
+    super({ objectMode: true });
+  }
+  _transform(chunk, enc, callback) {
+    const updateMessage = proto.UpdateMessage.decode(chunk);
+    this.push(updateMessage);
+    callback();
+  }
+}
+
+class ShuntStream extends stream.Writable {
+  constructor() {
+    super({
+      objectMode: true,
+    });
+  }
+  _write(chunk, enc, callback) {}
+}
+
+class SpeedTestStream extends stream.Transform {
+  constructor(options = {}) {
+    super();
+    const interval = options.interval;
+    const reportSpeed = options.reportSpeed;
+    this.chunkSize = 0;
+    const t = setInterval(() => {
+      reportSpeed && reportSpeed({ chunkSize: this.chunkSize, interval });
+      this.chunkSize = 0;
+    }, interval);
+    this.on("end", () => {
+      clearTimeout(t);
+    });
+  }
+  _transform(chunk, enc, callback) {
+    chunk.length && (this.chunkSize += chunk.length);
+    this.push(chunk, enc);
+    callback();
+  }
+}
+
 module.exports = {
   WebContentsEventStream,
   EmitterEventStream,
@@ -276,4 +335,7 @@ module.exports = {
   bufferToNum,
   EncodeBitmapBroadcastUpdateMessageStream,
   DecodeBitmapBroadcastUpdateMessageStream,
+  UpdateMessageEncodeStream,
+  UpdateMessageDecodeStream,
+  SpeedTestStream,
 };

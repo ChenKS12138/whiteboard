@@ -19,6 +19,7 @@ const {
   ThrottleStream,
   EncodeBitmapBroadcastUpdateMessageStream,
   DecodeBitmapBroadcastUpdateMessageStream,
+  SpeedTestStream,
 } = require("./stream");
 
 if (require("electron-squirrel-startup")) {
@@ -69,6 +70,11 @@ const createWindow = () => {
     stream.pipeline(
       broadcastStream,
       new SizePrefixedChunkDecodeStream(960000),
+      new SpeedTestStream({
+        interval: 1000,
+        reportSpeed: (...args) =>
+          mainWindow.webContents.send(events.REPORT_DOWN_STREAM_SPEED, ...args),
+      }),
       new DecompressStream(),
       new DecodeBitmapBroadcastUpdateMessageStream(),
       new ApplyDiffStream(bitmapBuffer),
@@ -107,6 +113,11 @@ const createWindow = () => {
       new GenerateDiffStream(bitmapBuffer),
       new EncodeBitmapBroadcastUpdateMessageStream(),
       new CompressStream(),
+      new SpeedTestStream({
+        interval: 1000,
+        reportSpeed: (...args) =>
+          mainWindow.webContents.send(events.REPORT_UP_STREAM_SPEED, ...args),
+      }),
       new SizePrefixedChunkEncodeStream(),
       broadcastStream,
       () => {}
@@ -145,6 +156,11 @@ const createWindow = () => {
     stream.pipeline(
       connection,
       new SizePrefixedChunkDecodeStream(960000),
+      new SpeedTestStream({
+        interval: 1000,
+        reportSpeed: (...args) =>
+          mainWindow.webContents.send(events.REPORT_DOWN_STREAM_SPEED, ...args),
+      }),
       new DecompressStream(),
       new DecodeBitmapBroadcastUpdateMessageStream(),
       new ApplyDiffStream(bitmapBuffer),
@@ -162,6 +178,11 @@ const createWindow = () => {
       new GenerateDiffStream(bitmapBuffer),
       new EncodeBitmapBroadcastUpdateMessageStream(),
       new CompressStream(),
+      new SpeedTestStream({
+        interval: 1000,
+        reportSpeed: (...args) =>
+          mainWindow.webContents.send(events.REPORT_UP_STREAM_SPEED, ...args),
+      }),
       new SizePrefixedChunkEncodeStream(),
       connection,
       () => {}

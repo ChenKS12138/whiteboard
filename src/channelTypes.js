@@ -13,6 +13,8 @@ const events = {
   CLIENT_ON_SERVER_CONNECTED: "clientOnServerConnected",
   CLIENT_ON_SERVER_DISCONNECTED: "clientOnServerDisconnected",
   CLIENT_ON_RECEIVED_BROADCAST_MESSAGE: "clientOnReceivedBroadCastMessage",
+  REPORT_UP_STREAM_SPEED: "reportUpStreamSpeed",
+  REPORT_DOWN_STREAM_SPEED: "reportDownStreamSpeed",
 };
 
 module.exports = events;

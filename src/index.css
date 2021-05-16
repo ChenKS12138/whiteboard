@@ -48,3 +48,22 @@ body {
   background-color: whitesmoke;
   cursor: not-allowed;
 }
+
+.box_net-status {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
+
+.label_speed {
+  font-size: 12px;
+  margin: 0 2px;
+}
+
+.label_speed[data-type="upstream"]::before {
+  content: "↑";
+}
+
+.label_speed[data-type="downstream"]::before {
+  content: "↓";
+}

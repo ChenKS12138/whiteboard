@@ -50,6 +50,12 @@ contextBridge.exposeInMainWorld("electron", {
     events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE,
     ipcRenderer
   ),
+  /**
+   * common
+   */
+  // main -> renderer
+  ...createContextBridgeReplyApi(events.REPORT_DOWN_STREAM_SPEED, ipcRenderer),
+  ...createContextBridgeReplyApi(events.REPORT_UP_STREAM_SPEED, ipcRenderer),
 });
 
 function createContextBridgeMessageApi(key, ipcRenderer) {
