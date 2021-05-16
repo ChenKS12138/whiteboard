@@ -69,7 +69,7 @@ const createWindow = () => {
     // Pipe Msg, Client -> Server
     stream.pipeline(
       broadcastStream,
-      new SizePrefixedChunkDecodeStream(960000),
+      new SizePrefixedChunkDecodeStream(),
       new SpeedTestStream({
         interval: 1000,
         reportSpeed: (...args) =>
@@ -155,7 +155,7 @@ const createWindow = () => {
     // Pipe Msg, Server -> Client
     stream.pipeline(
       connection,
-      new SizePrefixedChunkDecodeStream(960000),
+      new SizePrefixedChunkDecodeStream(),
       new SpeedTestStream({
         interval: 1000,
         reportSpeed: (...args) =>

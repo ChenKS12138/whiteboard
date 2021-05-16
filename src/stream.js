@@ -16,9 +16,9 @@ class SizePrefixedChunkEncodeStream extends stream.Transform {
 }
 
 class SizePrefixedChunkDecodeStream extends stream.Transform {
-  constructor(maxChunkSize) {
+  constructor() {
     super();
-    this._buffer = Buffer.alloc(maxChunkSize);
+    this._buffer = Buffer.alloc(1);
     this._contentIndex = 0;
     this._prefixIndex = 0;
     this._prefixBuffer = Buffer.alloc(4);
@@ -42,6 +42,19 @@ class SizePrefixedChunkDecodeStream extends stream.Transform {
         this._prefixIndex += appendSize;
       } else {
         const contentSize = bufferToNum(this._prefixBuffer);
+        if (this._buffer.length < contentSize) {
+          let nextContentSize = this._buffer.length;
+          while (nextContentSize < contentSize) {
+            if (nextContentSize < 1024) {
+              nextContentSize *= 2;
+            } else {
+              nextContentSize *= 1.25;
+            }
+          }
+          const oldBuffer = this._buffer;
+          this._buffer = Buffer.alloc(nextContentSize);
+          oldBuffer.copy(this._buffer, 0, 0, oldBuffer.length);
+        }
         const appendSize = Math.max(
           0,
           Math.min(contentSize - this._contentIndex, data.length - dataIndex)
