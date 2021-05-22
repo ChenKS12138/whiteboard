@@ -304,12 +304,29 @@ class UpdateMessageDecodeStream extends stream.Transform {
 }
 
 class ShuntStream extends stream.Writable {
-  constructor() {
+  constructor(subStreamRules = []) {
     super({
       objectMode: true,
     });
+    this._rules = subStreamRules.map((streamRule) => {
+      const { matcher, buildSubPipeline } = streamRule;
+      const upstream = new stream.PassThrough({
+        objectMode: true,
+      });
+      buildSubPipeline(upstream);
+      return {
+        matcher,
+        upstream,
+      };
+    });
   }
-  _write(chunk, enc, callback) {}
+  _write(chunk, enc, callback) {
+    const target = this._rules.find((one) => one.matcher(chunk));
+    if (target && target.upstream) {
+      target.upstream.push(chunk, enc);
+    }
+    callback();
+  }
 }
 
 class SpeedTestStream extends stream.Transform {
@@ -351,4 +368,5 @@ module.exports = {
   UpdateMessageEncodeStream,
   UpdateMessageDecodeStream,
   SpeedTestStream,
+  ShuntStream,
 };

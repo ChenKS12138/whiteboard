@@ -16,8 +16,6 @@ const canvasEle = document.querySelector("#cav");
 const localAddressEle = document.querySelector("#local-address");
 const statusLight = document.querySelector("#status-light");
 
-console.log(upStreamLabelEle, downStreamLabelEle);
-
 /**
  * State
  */

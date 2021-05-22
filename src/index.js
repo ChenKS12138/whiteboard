@@ -18,9 +18,11 @@ const {
   ApplyDiffStream,
   ThrottleStream,
   EncodeBitmapBroadcastUpdateMessageStream,
-  DecodeBitmapBroadcastUpdateMessageStream,
   SpeedTestStream,
+  ShuntStream,
+  UpdateMessageDecodeStream,
 } = require("./stream");
+const constants = require("./constants");
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -76,12 +78,36 @@ const createWindow = () => {
           mainWindow.webContents.send(events.REPORT_DOWN_STREAM_SPEED, ...args),
       }),
       new DecompressStream(),
-      new DecodeBitmapBroadcastUpdateMessageStream(),
-      new ApplyDiffStream(bitmapBuffer),
-      new WebContentsEventStream(
-        mainWindow.webContents,
-        events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
-      ),
+      new UpdateMessageDecodeStream(),
+      new ShuntStream([
+        {
+          matcher(updateMessage) {
+            return (
+              updateMessage &&
+              updateMessage.dataKind === constants.DATA_KIND.BITMAP &&
+              updateMessage.deliveryKind === constants.DELIVERY_KIND.BROADCASTED
+            );
+          },
+          buildSubPipeline(upstream) {
+            stream.pipeline(
+              upstream,
+              new stream.Transform({
+                transform(updateMessage, enc, callback) {
+                  this.push(updateMessage.chunk, enc);
+                  callback();
+                },
+                objectMode: true,
+              }),
+              new ApplyDiffStream(bitmapBuffer),
+              new WebContentsEventStream(
+                mainWindow.webContents,
+                events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
+              ),
+              () => {}
+            );
+          },
+        },
+      ]),
       () => {}
     );
 
@@ -162,12 +188,36 @@ const createWindow = () => {
           mainWindow.webContents.send(events.REPORT_DOWN_STREAM_SPEED, ...args),
       }),
       new DecompressStream(),
-      new DecodeBitmapBroadcastUpdateMessageStream(),
-      new ApplyDiffStream(bitmapBuffer),
-      new WebContentsEventStream(
-        mainWindow.webContents,
-        events.CLIENT_ON_RECEIVED_BROADCAST_MESSAGE
-      ),
+      new UpdateMessageDecodeStream(),
+      new ShuntStream([
+        {
+          matcher(updateMessage) {
+            return (
+              updateMessage &&
+              updateMessage.dataKind === constants.DATA_KIND.BITMAP &&
+              updateMessage.deliveryKind === constants.DELIVERY_KIND.BROADCASTED
+            );
+          },
+          buildSubPipeline(upstream) {
+            stream.pipeline(
+              upstream,
+              new stream.Transform({
+                transform(updateMessage, enc, callback) {
+                  this.push(updateMessage.chunk, enc);
+                  callback();
+                },
+                objectMode: true,
+              }),
+              new ApplyDiffStream(bitmapBuffer),
+              new WebContentsEventStream(
+                mainWindow.webContents,
+                events.SERVER_ON_RECERIVED_BROADCAST_MESSAGE
+              ),
+              () => {}
+            );
+          },
+        },
+      ]),
       () => {}
     );
 
