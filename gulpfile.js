@@ -2,15 +2,45 @@ const { series, watch, parallel, src, dest } = require("gulp");
 const electron = require("electron");
 const proc = require("child_process");
 const argv = require("yargs").argv;
-const ts = require("gulp-typescript");
+const babel = require("gulp-babel");
+const alias = require("gulp-path-alias");
+const path = require("path");
+
 const del = require("del");
 const stream = require("stream");
 
-const TARGET_DIR = "target";
+const TARGET_DIR = path.join(__dirname, "target");
 
-function createTransformTS(glob = "./src/**/**.ts") {
+function createTransformTS(
+  glob = ["src/**/**.ts", "src/**/**.tsx"],
+  destDir = TARGET_DIR
+) {
   return function transfromTS() {
-    return src(glob).pipe(ts({})).pipe(dest(TARGET_DIR));
+    return src(glob)
+      .pipe(
+        alias({
+          paths: {
+            "@": path.join(__dirname, "./src"),
+          },
+        })
+      )
+      .pipe(
+        babel({
+          presets: [
+            [
+              "@babel/preset-env",
+              {
+                targets: {
+                  electron: "12",
+                },
+              },
+            ],
+            "@babel/preset-typescript",
+            "@babel/preset-react",
+          ],
+        })
+      )
+      .pipe(dest(destDir));
   };
 }
 
@@ -30,6 +60,7 @@ function dev(doneDev) {
         child.removeAllListeners();
         child.kill();
       });
+      children = [];
     }
     done();
   }
@@ -69,10 +100,20 @@ function dev(doneDev) {
   series(clean, series(parallel(copy, createTransformTS()), makeChildren()))();
 
   watcher = watch(["./src"]);
-  watcher.on("change", function (path) {
-    console.log("[watch] file " + path + " changed");
+  watcher.on("change", function (filepath) {
+    console.log("[watch] file " + filepath + " changed");
     series(
-      /\.ts$/.test(path) ? createTransformTS(path) : copy,
+      /\.tsx?$/.test(filepath)
+        ? createTransformTS(
+            filepath,
+            path.parse(
+              path.join(
+                TARGET_DIR,
+                path.relative(path.join(__dirname, "src"), filepath)
+              )
+            ).dir
+          )
+        : copy,
       clearChildren,
       makeChildren()
     )();

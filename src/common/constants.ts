@@ -26,3 +26,8 @@ export enum ChannelType {
   REPORT_UP_STREAM_SPEED = "reportUpStreamSpeed",
   REPORT_DOWN_STREAM_SPEED = "reportDownStreamSpeed",
 }
+
+export enum ConnectionStatus {
+  INACTIVE = "inactive",
+  ACTIVE = "active",
+}

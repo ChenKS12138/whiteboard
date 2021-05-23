@@ -3,34 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <title>Whiteboard</title>
-    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <div id="app">
-      <div class="box_net-status">
-        <span class="label_speed" data-type="upstream">0B/s</span>
-        <span class="label_speed" data-type="downstream">0B/s</span>
-      </div>
-      <div class="box status">
-        <div
-          id="status-light"
-          data-status="inactive"
-          class="status-light"
-        ></div>
-        <div id="local-address"></div>
-      </div>
-      <div class="box box_server-controll">
-        <button id="btn1">start server</button>
-        <button disabled id="btn3">stop server</button>
-      </div>
-      <div class="box box_client-controll">
-        <input id="input" type="text" />
-        <button id="btn2">connect to server</button>
-        <button disabled id="btn4">disconnect to server</button>
-      </div>
-      <canvas data-disabled="true" id="cav" width="600" height="400"></canvas>
-      <button id="btn5">reset</button>
-    </div>
+    <div id="app"></div>
     <script src="./renderer.js"></script>
   </body>
 </html>

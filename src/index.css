@@ -32,19 +32,15 @@ body {
   content: "Activate";
 }
 
-#textarea {
-  margin-top: 20px;
-}
-
 .box {
   margin: 20px auto;
 }
 
-#cav {
+.cav {
   border: solid 1px black;
 }
 
-#cav[data-disabled="true"] {
+.cav[data-disabled="true"] {
   background-color: whitesmoke;
   cursor: not-allowed;
 }
