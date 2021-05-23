@@ -12,3 +12,8 @@ export interface ISubStreamRule<T = any> {
   matcher: (chunk: T) => boolean;
   buildSubPipeline: (upstream: Readable) => void;
 }
+
+export interface ISpeedReportMessage {
+  chunkSize: number;
+  interval: number;
+}

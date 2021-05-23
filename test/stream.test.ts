@@ -7,7 +7,7 @@ import {
   numToBuffer,
   bufferToNum,
   ThrottleStream,
-} from "../src/util/stream";
+} from "../src/common/stream";
 
 describe("number2buffer & buffer2number", () => {
   it("should convert well", (done) => {

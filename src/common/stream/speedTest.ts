@@ -1,8 +1,9 @@
 import * as stream from "stream";
+import { ISpeedReportMessage } from "../interface";
 
 interface ISpeedTestStreamOption {
   interval: number;
-  reportSpeed: (speed: { chunkSize: number; interval: number }) => void;
+  reportSpeed: (speed: ISpeedReportMessage) => void;
 }
 
 export class SpeedTestStream extends stream.Transform {
