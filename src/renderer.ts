@@ -1,3 +1,4 @@
+// @ts-nocheck
 const btn1Ele = document.querySelector("#btn1");
 const btn2Ele = document.querySelector("#btn2");
 const btn3Ele = document.querySelector("#btn3");

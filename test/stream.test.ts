@@ -1,5 +1,5 @@
-const stream = require("stream");
-const {
+import * as stream from "stream";
+import {
   DecompressStream,
   CompressStream,
   SizePrefixedChunkEncodeStream,
@@ -7,7 +7,7 @@ const {
   numToBuffer,
   bufferToNum,
   ThrottleStream,
-} = require("../src/stream");
+} from "../src/util/stream";
 
 describe("number2buffer & buffer2number", () => {
   it("should convert well", (done) => {
@@ -67,7 +67,7 @@ describe("sized chunk", () => {
           callback();
         },
       }),
-      new SizePrefixedChunkDecodeStream(1024),
+      new SizePrefixedChunkDecodeStream(),
       new stream.Writable({
         write(chunk, enc, callback) {
           expect(chunk.toString()).toBe(text);

@@ -1,7 +1,7 @@
-const net = require("net");
-const { ServerBroadcastStream } = require("./stream");
+import * as net from "net";
+import { ServerBroadcastStream } from "./stream";
 
-function createServer() {
+export function createServer() {
   const broadcastStream = new ServerBroadcastStream();
   const srv = net.createServer((socket) => {
     broadcastStream.emit("joinNewClient", socket);
@@ -20,7 +20,13 @@ function createServer() {
   };
 }
 
-function createConnection({ port, host } = {}) {
+export function createConnection({
+  port,
+  host,
+}: {
+  port: number;
+  host: string;
+}) {
   const conn = net.createConnection({ port, host });
   conn.on("end", () => {
     conn.destroy();
@@ -28,8 +34,3 @@ function createConnection({ port, host } = {}) {
   });
   return { connection: conn };
 }
-
-module.exports = {
-  createServer,
-  createConnection,
-};
