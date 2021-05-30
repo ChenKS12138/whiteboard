@@ -5,7 +5,6 @@ import { useMessageSender, useMessageListener } from "@/app/renderer/hooks";
 import { formatSpeed } from "@/common/util";
 import { ISpeedReportMessage } from "@/common/interface";
 import { AddressInfo } from "net";
-import { ipcRenderer } from "electron/renderer";
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;

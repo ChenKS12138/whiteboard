@@ -15,32 +15,34 @@ function createTransformTS(
   glob = ["src/**/**.ts", "src/**/**.tsx"],
   destDir = TARGET_DIR
 ) {
-  return function transfromTS() {
-    return src(glob)
-      .pipe(
-        alias({
-          paths: {
-            "@": path.join(__dirname, "./src"),
-          },
-        })
-      )
-      .pipe(
-        babel({
-          presets: [
-            [
-              "@babel/preset-env",
-              {
-                targets: {
-                  electron: "12",
-                },
+  return function transfromTS(done) {
+    stream.pipeline(
+      src(glob),
+      alias({
+        paths: {
+          "@": path.join(__dirname, "./src"),
+        },
+      }),
+      babel({
+        presets: [
+          [
+            "@babel/preset-env",
+            {
+              targets: {
+                electron: "12",
               },
-            ],
-            "@babel/preset-typescript",
-            "@babel/preset-react",
+            },
           ],
-        })
-      )
-      .pipe(dest(destDir));
+          "@babel/preset-typescript",
+          "@babel/preset-react",
+        ],
+        comments: false,
+      }),
+      dest(destDir),
+      () => {
+        done();
+      }
+    );
   };
 }
 
