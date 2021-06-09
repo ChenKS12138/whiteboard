@@ -1,6 +1,6 @@
-# whiteboard-electron
+# whiteboard
 
-whiteboard
+An Whiteboard App Build On Electron
 
 # Example
 
